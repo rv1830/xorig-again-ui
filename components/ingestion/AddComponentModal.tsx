@@ -1,5 +1,5 @@
 // components/ingestion/AddComponentModal.tsx
-// Updated with Manual Technical Specifications and original sections preserved
+// Updated with Manual Technical Specifications, Core Custom Data and original sections preserved
 import React, { useState, useEffect } from "react";
 import { Button, Input, Modal } from "../ui/primitives";
 import { Save, Loader2, Plus, Wand2, Trash2 } from "lucide-react";
@@ -46,7 +46,9 @@ export default function AddComponentModal({
   });
 
   const [extraSpecs, setExtraSpecs] = useState<Array<{ review: string; source: string }>>([]);
-  const [customFields, setCustomFields] = useState<Array<{ name: string; type: "string" | "int" | "array"; value: string | number | string[] }>>([]);
+  
+  // State for Core Custom Fields // Added core_custom_data requirement
+  const [coreCustomFields, setCoreCustomFields] = useState<Array<{ name: string; type: "string" | "int" | "array"; value: string | number | string[] }>>([]);
   
   // Technical Specifications manual state
   const [techSpecCustomFields, setTechSpecCustomFields] = useState<Array<{ name: string; type: "string" | "int" | "array"; value: string | number | string[] }>>([]);
@@ -61,7 +63,7 @@ export default function AddComponentModal({
       setComponentType("");
       setCoreData({ manufacturer: "", vendor: "", model_name: "", model_number: "", product_page_url: "", price: "", discounted_price: "", tracked_price: "" });
       setExtraSpecs([]);
-      setCustomFields([]);
+      setCoreCustomFields([]); // Reset core custom fields
       setTechSpecCustomFields([]);
       setShowAddField(false);
     }
@@ -94,19 +96,20 @@ export default function AddComponentModal({
   const addCustomField = () => {
     if (!newFieldName.trim()) return alert("Please enter a field name");
     const newField = { name: newFieldName.trim(), type: newFieldType, value: newFieldType === "array" ? "" : newFieldType === "int" ? 0 : "" };
+    
     if (addFieldSection === "techspec") {
       setTechSpecCustomFields([...techSpecCustomFields, newField]);
     } else {
-      setCustomFields([...customFields, newField]);
+      setCoreCustomFields([...coreCustomFields, newField]); // Saving to core_custom_data state
     }
     setNewFieldName("");
     setShowAddField(false);
   };
 
-  const updateCustomField = (index: number, value: string) => {
-    const updated = [...customFields];
+  const updateCoreCustomField = (index: number, value: string) => { // Added updater for core custom
+    const updated = [...coreCustomFields];
     updated[index].value = updated[index].type === "int" ? parseInt(value) || 0 : value;
-    setCustomFields(updated);
+    setCoreCustomFields(updated);
   };
 
   const updateTechSpecCustomField = (index: number, value: string) => {
@@ -128,18 +131,22 @@ export default function AddComponentModal({
         price: coreData.price ? parseFloat(coreData.price) : null,
         discounted_price: coreData.discounted_price ? parseFloat(coreData.discounted_price) : null,
         tracked_price: coreData.tracked_price ? parseFloat(coreData.tracked_price) : null,
-        // Backend specific technical model data field
+        
+        // Backend requirement: Custom Core fields into core_custom_data // Added mapping here
+        core_custom_data: coreCustomFields.reduce((acc: any, f) => {
+          acc[f.name] = f.type === "array" ? processArray(f.value) : f.value;
+          return acc;
+        }, {}),
+
+        // Technical model data field
         tech_specs: techSpecCustomFields.reduce((acc: any, f) => {
           acc[f.name] = f.type === "array" ? processArray(f.value) : f.value;
           return acc;
         }, {}),
+        
         // Master table JSON field
         specs: {
             extra_specs: extraSpecs.filter((spec) => spec.review || spec.source),
-            ...customFields.reduce((acc: any, f) => {
-                acc[`_dynamic_${f.name}`] = f.type === "array" ? processArray(f.value) : f.value;
-                return acc;
-            }, {})
         }
       };
 
@@ -195,16 +202,16 @@ export default function AddComponentModal({
               <Input label="Discounted Price (₹)" type="number" value={coreData.discounted_price} onChange={(e: any) => setCoreData({ ...coreData, discounted_price: e.target.value })} />
               <Input label="Tracked Price (₹)" type="number" value={coreData.tracked_price} onChange={(e: any) => setCoreData({ ...coreData, tracked_price: e.target.value })} />
             </div>
-            {/* Custom Core Fields Display */}
-            {customFields.length > 0 && (
+            {/* Custom Core Fields Display // Now using coreCustomFields state */}
+            {coreCustomFields.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-4">
-                {customFields.map((field, index) => (
+                {coreCustomFields.map((field, index) => (
                   <div key={index} className="relative p-2 border rounded-lg">
                     <div className="flex justify-between items-center mb-1">
                       <label className="text-xs font-medium text-blue-700 capitalize">{field.name} ({field.type})</label>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setCustomFields(customFields.filter((_, i) => i !== index))} className="text-red-500 h-5 w-5 p-0"><Trash2 className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setCoreCustomFields(coreCustomFields.filter((_, i) => i !== index))} className="text-red-500 h-5 w-5 p-0"><Trash2 className="h-3 w-3" /></Button>
                     </div>
-                    <input className="w-full p-2 border rounded text-sm" type={field.type === "int" ? "number" : "text"} value={field.value as string} onChange={(e) => updateCustomField(index, e.target.value)} />
+                    <input className="w-full p-2 border rounded text-sm" type={field.type === "int" ? "number" : "text"} value={field.value as string} onChange={(e) => updateCoreCustomField(index, e.target.value)} />
                   </div>
                 ))}
               </div>
@@ -290,7 +297,7 @@ export default function AddComponentModal({
       {showAddField && (
         <div className="fixed inset-0 flex items-center justify-center z-[9999] bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-xl p-6 shadow-2xl border-2 border-gray-200 max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Add {addFieldSection === 'techspec' ? 'Technical' : 'Custom'} Field</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Add {addFieldSection === 'techspec' ? 'Technical' : 'Custom Core'} Field</h3>
             <div className="space-y-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Field Name</label><input autoFocus type="text" className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter field name" value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} /></div>
               <div>

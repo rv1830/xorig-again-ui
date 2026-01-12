@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Save, Plus, Trash2, Loader2 } from "lucide-react";
+import { Pencil, Save, Plus, Trash2, Loader2, X } from "lucide-react"; // X import kiya
 
 interface ComponentData {
   id?: string;
@@ -44,7 +44,6 @@ interface DetailsDrawerProps {
   isCreating: boolean;
 }
 
-// Defining a structure for dynamic fields to track their types
 interface TypedField {
   key: string;
   value: any;
@@ -56,13 +55,11 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // States
   const [coreData, setCoreData] = useState<Partial<ComponentData>>({});
   const [coreCustomFields, setCoreCustomFields] = useState<TypedField[]>([]);
   const [techSpecs, setTechSpecs] = useState<TypedField[]>([]);
   const [extraSpecs, setExtraSpecs] = useState<Array<{ review: string; source: string }>>([]);
 
-  // Add Field Dialog State
   const [showAddField, setShowAddField] = useState(false);
   const [addFieldSection, setAddFieldSection] = useState<"core" | "tech">("core");
   const [newFieldName, setNewFieldName] = useState("");
@@ -71,7 +68,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
   useEffect(() => {
     if (!component) return;
 
-    // 1. Core Data
     setCoreData({
       id: component.id,
       type: component.type,
@@ -87,7 +83,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
     const relationKey = component.type.toLowerCase();
     const specificData = component[relationKey] || {};
 
-    // 2. Helper to detect type from value
     const mapToTypedFields = (obj: Record<string, any>): TypedField[] => {
       return Object.entries(obj).map(([key, value]) => {
         let type: TypedField["type"] = "string";
@@ -186,12 +181,17 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
               <DialogTitle className="text-2xl font-bold">{isCreating ? "New Component" : coreData.model_name}</DialogTitle>
               <DialogDescription className="text-blue-600 font-semibold uppercase tracking-wider">{coreData.type}</DialogDescription>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setEditMode(!editMode)}>
+            <div className="flex gap-3 items-center">
+              {/* CROSS BUTTON ADDED HERE */}
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                <X className="w-5 h-5" />
+              </Button>
+
+              <Button variant="outline" className="cursor-pointer" onClick={() => setEditMode(!editMode)}>
                 {editMode ? "Cancel" : <><Pencil className="w-4 h-4 mr-2" /> Edit</>}
               </Button>
               {editMode && (
-                <Button onClick={handleSave} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={handleSave} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
                   {loading ? <Loader2 className="animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save Data</>}
                 </Button>
               )}
@@ -200,7 +200,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
         </DialogHeader>
 
         <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* LEFT: CORE IDENTITY */}
           <div className="space-y-6">
             <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-center mb-6">
@@ -239,7 +238,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
             </section>
           </div>
 
-          {/* RIGHT: TECHNICAL SPECS */}
           <div className="space-y-6">
             <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-center mb-6">
@@ -283,7 +281,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
         </div>
       </DialogContent>
 
-      {/* Add Field Dialog */}
       <Dialog open={showAddField} onOpenChange={setShowAddField}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

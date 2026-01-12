@@ -29,6 +29,17 @@ interface AddComponentModalProps {
   onSuccess: () => void;
 }
 
+// Vendor options list updated with EliteHubs and Flipkart
+const VENDOR_OPTIONS = [
+  { id: "AMAZON", name: "Amazon" },
+  { id: "FLIPKART", name: "Flipkart" },
+  { id: "MDCOMPUTERS", name: "MDComputers" },
+  { id: "VEDANT", name: "Vedant Computers" },
+  { id: "PRIMEABGB", name: "PrimeABGB" },
+  { id: "ELITEHUBS", name: "EliteHubs" },
+  { id: "OTHER", name: "Other (Manual Entry)" },
+];
+
 export default function AddComponentModal({
   isOpen,
   onClose,
@@ -37,10 +48,11 @@ export default function AddComponentModal({
   const [loading, setLoading] = useState<boolean>(false);
   const [componentType, setComponentType] = useState<string>("");
   const [fetchingSpecs, setFetchingSpecs] = useState<boolean>(false);
+  const [vendorType, setVendorType] = useState<string>("AMAZON");
 
   const [coreData, setCoreData] = useState<CoreIdentityData>({
     manufacturer: "",
-    vendor: "",
+    vendor: "AMAZON",
     model_name: "",
     model_number: "",
     product_page_url: "",
@@ -60,7 +72,8 @@ export default function AddComponentModal({
   useEffect(() => {
     if (isOpen) {
       setComponentType("");
-      setCoreData({ manufacturer: "", vendor: "", model_name: "", model_number: "", product_page_url: "", price: "", discounted_price: "" });
+      setVendorType("AMAZON");
+      setCoreData({ manufacturer: "", vendor: "AMAZON", model_name: "", model_number: "", product_page_url: "", price: "", discounted_price: "" });
       setExtraSpecs([]);
       setCoreCustomFields([]);
       setTechSpecCustomFields([]);
@@ -204,7 +217,35 @@ export default function AddComponentModal({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input label="Manufacturer *" placeholder="e.g., Intel" value={coreData.manufacturer} onChange={(e: any) => setCoreData({ ...coreData, manufacturer: e.target.value })} required />
-              <Input label="Vendor" placeholder="e.g., Amazon" value={coreData.vendor} onChange={(e: any) => setCoreData({ ...coreData, vendor: e.target.value })} />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Vendor *</label>
+                <div className="flex gap-2">
+                  <select 
+                    className="w-1/3 rounded-lg border border-gray-300 p-2 text-sm outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer"
+                    value={vendorType}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setVendorType(val);
+                      if (val !== "OTHER") {
+                        setCoreData({ ...coreData, vendor: val });
+                      } else {
+                        setCoreData({ ...coreData, vendor: "" });
+                      }
+                    }}
+                  >
+                    {VENDOR_OPTIONS.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                  </select>
+                  <Input 
+                    placeholder={vendorType === "OTHER" ? "Type vendor name..." : "Vendor name"} 
+                    value={coreData.vendor} 
+                    disabled={vendorType !== "OTHER"}
+                    onChange={(e: any) => setCoreData({ ...coreData, vendor: e.target.value })} 
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
               <Input label="Model Name *" placeholder="e.g., Core i5" value={coreData.model_name} onChange={(e: any) => setCoreData({ ...coreData, model_name: e.target.value })} required />
               <Input label="Model Number *" placeholder="e.g., BX123" value={coreData.model_number} onChange={(e: any) => setCoreData({ ...coreData, model_number: e.target.value })} required />
             </div>
@@ -301,12 +342,17 @@ export default function AddComponentModal({
             </div>
           </Card>
 
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-4 pt-10 border-t border-gray-200">
-            <Button type="button" variant="secondary" onClick={onClose} className="px-8 py-6 text-lg cursor-pointer">Cancel</Button>
-            <Button type="submit" disabled={loading} className="px-10 py-6 text-lg bg-blue-600 hover:bg-blue-700 cursor-pointer">
-              {loading ? <><Loader2 className="animate-spin mr-2" size={20} /> Saving...</> : <><Save size={20} className="mr-2" /> Save Component</>}
-            </Button>
+          {/* Footer Actions and Parsing Note */}
+          <div className="space-y-4 pt-10 border-t border-gray-200">
+            <p className="text-sm text-gray-500 italic text-center font-medium">
+              Note: Parsing is currently supported only for MDComputers, PrimeABGB, EliteHubs, and Vedant Computers.
+            </p>
+            <div className="flex justify-end gap-4">
+              <Button type="button" variant="secondary" onClick={onClose} className="px-8 py-6 text-lg cursor-pointer">Cancel</Button>
+              <Button type="submit" disabled={loading} className="px-10 py-6 text-lg bg-blue-600 hover:bg-blue-700 cursor-pointer">
+                {loading ? <><Loader2 className="animate-spin mr-2" size={20} /> Saving...</> : <><Save size={20} className="mr-2" /> Save Component</>}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
@@ -317,11 +363,11 @@ export default function AddComponentModal({
           <div className="bg-white rounded-xl p-6 shadow-2xl border-2 border-gray-200 max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Add {addFieldSection === 'techspec' ? 'Technical' : 'Custom Core'} Field</h3>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Field Name</label>
                 <input autoFocus type="text" className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. wattage, is_modular" value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Data Type</label>
                 <select className="w-full rounded-lg border border-gray-300 p-3 text-sm outline-none cursor-pointer" value={newFieldType} onChange={(e: any) => setNewFieldType(e.target.value)}>
                   <option value="string">String (Text)</option>

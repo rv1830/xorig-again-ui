@@ -66,7 +66,6 @@ export default function XORigIngestionAdmin() {
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
-  // Pagination State
   const [page, setPage] = useState<number>(1);
   const [meta, setMeta] = useState({ totalItems: 0, totalPages: 1, currentPage: 1 });
 
@@ -81,7 +80,6 @@ export default function XORigIngestionAdmin() {
 
   const [rules, setRules] = useState<RuleData[]>([]);
 
-  // Fixed: Stabilized fetch function
   const fetchComponents = useCallback(async () => {
     setLoading(true);
     try {
@@ -134,27 +132,23 @@ export default function XORigIngestionAdmin() {
     }
   }, [fetchComponents, toast]);
 
-  // Set mounted once
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fixed: Loop prevention logic
   useEffect(() => {
     if (mounted) {
       const timeoutId = setTimeout(() => {
         fetchComponents();
-      }, 50); // Small delay to debounce rapid state changes
+      }, 50);
       return () => clearTimeout(timeoutId);
     }
   }, [fetchComponents, mounted]);
 
-  // Fetch rules only when tab changes
   useEffect(() => {
     if (mounted && tab === "rules") fetchRules();
   }, [tab, mounted, fetchRules]);
 
-  // Reset page to 1 when filters/sort change
   useEffect(() => {
     setPage(1);
   }, [category, q, sortKey, sortDir]);
@@ -216,7 +210,7 @@ export default function XORigIngestionAdmin() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen w-full bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen w-full bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 overflow-x-hidden">
       {fetchingDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl">
@@ -251,8 +245,8 @@ export default function XORigIngestionAdmin() {
           </div>
 
           <TabsContent value="components" className="mt-6">
-            <Card className="rounded-3xl shadow-xl border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-              <CardContent className="p-6 md:p-8">
+            <Card className="rounded-3xl shadow-xl border-white/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+              <CardContent className="p-6 md:p-8 flex flex-col gap-6">
                 <Toolbar
                   categories={categories}
                   category={category} setCategory={setCategory}
@@ -261,7 +255,7 @@ export default function XORigIngestionAdmin() {
                   sortDir={sortDir} setSortDir={setSortDir}
                 />
 
-                <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900 min-h-100">
+                <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900 min-h-100 flex flex-col">
                   {loading ? (
                     <div className="flex items-center justify-center h-100 py-20">
                       <div className="text-center space-y-4">
@@ -270,7 +264,7 @@ export default function XORigIngestionAdmin() {
                       </div>
                     </div>
                   ) : (
-                    <>
+                    <div className="overflow-auto max-h-[600px] scrollbar-thin scrollbar-thumb-slate-200">
                       <GridTable
                         columns={tableColumns}
                         rows={formattedRows}
@@ -279,39 +273,46 @@ export default function XORigIngestionAdmin() {
                         onQuickEdit={() => {}} 
                         onDelete={handleDelete}
                       />
-                      
-                      {/* PAGINATION CONTROLS */}
-                      <div className="flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700">
-                        <div className="text-sm text-slate-500 font-medium">
-                          Showing <span className="text-blue-600">{formattedRows.length}</span> of <span className="text-blue-600">{meta.totalItems}</span> results
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline" size="sm" className="rounded-xl cursor-pointer"
-                            disabled={page <= 1}
-                            onClick={() => setPage(p => p - 1)}
-                          >
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                          </Button>
-                          <div className="text-sm font-bold px-4">
-                            Page {meta.currentPage} of {meta.totalPages}
-                          </div>
-                          <Button
-                            variant="outline" size="sm" className="rounded-xl cursor-pointer"
-                            disabled={page >= meta.totalPages}
-                            onClick={() => setPage(p => p + 1)}
-                          >
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   )}
                 </div>
 
-                <div className="mt-6 flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <Database className="h-5 w-5 text-blue-600" />
-                  <span>Database Status: Active Sync</span>
+                {/* COMBINED STATUS BAR: RESULTS + PAGINATION + DB STATUS */}
+                <div className="mt-6 flex items-center justify-between text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <Database className="h-5 w-5 text-blue-600" />
+                      <span>Database Status: Active Sync</span>
+                    </div>
+                    <div className="border-l border-slate-300 dark:border-slate-600 h-4 mx-1" />
+                    <div>
+                      Showing <span className="text-blue-600 font-bold">{formattedRows.length}</span> of <span className="text-blue-600 font-bold">{meta.totalItems}</span> results
+                    </div>
+                  </div>
+
+                  {!loading && (
+                    <div className="flex items-center gap-4">
+                      <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Page {meta.currentPage} of {meta.totalPages}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-white dark:hover:bg-slate-700 shadow-none border border-slate-200 dark:border-slate-600"
+                          disabled={page <= 1}
+                          onClick={() => setPage(p => p - 1)}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-white dark:hover:bg-slate-700 shadow-none border border-slate-200 dark:border-slate-600"
+                          disabled={page >= meta.totalPages}
+                          onClick={() => setPage(p => p + 1)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

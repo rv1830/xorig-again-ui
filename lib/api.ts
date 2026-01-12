@@ -15,27 +15,33 @@ export const api = {
     }
   },
 
-  // 2. Get Components (Mapped category -> type)
-  getComponents: async (category?: string, search?: string) => {
+  // 2. Get Components (Updated to handle Pagination & Sorting)
+  getComponents: async (
+    category?: string, 
+    search?: string, 
+    page: number = 1, 
+    limit: number = 20, 
+    sortKey: string = 'updatedAt', 
+    sortDir: string = 'desc'
+  ) => {
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, any> = {
+        page,
+        limit,
+        sortKey,
+        sortDir
+      };
+      
       if (category && category !== "All") params.type = category;
       if (search) params.search = search;
 
       const res = await axios.get(`${API_BASE}/components`, { params });
-      console.log("🔍 API Response from /components:", res.data);
-      if (res.data && res.data.length > 0) {
-        console.log(
-          "🔍 First component updatedAt:",
-          res.data[0].updatedAt,
-          "Type:",
-          typeof res.data[0].updatedAt
-        );
-      }
-      return res.data;
+      
+      // Backend ab { data, meta } bhej raha hai
+      return res.data; 
     } catch (error) {
       console.error("API Error - getComponents:", error);
-      return [];
+      return { data: [], meta: { totalItems: 0, totalPages: 0, currentPage: 1 } };
     }
   },
 
@@ -140,10 +146,6 @@ export const api = {
 
   updateRule: async () => {
     try {
-      // Assuming you might add an update endpoint later, for now we can simulate or use create logic if supported
-      // For a true REST API, you'd likely have a PUT or PATCH endpoint like:
-      // const res = await axios.put(`${API_BASE}/rules/${id}`, payload);
-      // return res.data;
       console.warn(
         "Update rule endpoint not fully implemented in backend example yet."
       );

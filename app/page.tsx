@@ -187,22 +187,26 @@ export default function XORigIngestionAdmin() {
       { key: "model_number", label: "Model Number" },
       { key: "price", label: "Price" },
       { key: "discounted_price", label: "Discounted Price" },
+      { key: "tracked_price", label: "Tracked Price" },
       { key: "vendor", label: "Vendor" },
       { key: "updatedAt", label: "Last Update" },
     ];
   }, []);
 
   // Format rows for display with new pricing structure
-  const formattedRows = useMemo(() => {
-    return components.map((c) => {
-      return {
-        ...c,
-        name: `${c.manufacturer} ${c.model_name}`.trim(),
-        // Keep the full timestamp, don't convert to date-only string
-        updatedAt: c.updatedAt || "—",
-      };
-    });
-  }, [components]);
+ // Isko replace karo
+// Isko replace karo (Line 185 ke paas)
+const formattedRows = useMemo(() => {
+  return components.map((c) => {
+    return {
+      ...c,
+      name: `${c.manufacturer} ${c.model_name}`.trim(),
+      // Strictly number ya null ensure karo
+      tracked_price: typeof c.tracked_price === 'number' ? c.tracked_price : (Number(c.tracked_price) || 0),
+      updatedAt: c.updatedAt || "—",
+    };
+  });
+}, [components]);
 
   async function openDrawer(row: ComponentData) {
     if (!row.id) return; // Skip if no ID

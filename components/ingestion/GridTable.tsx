@@ -20,6 +20,7 @@ interface ComponentRow {
   };
   price?: number;
   discounted_price?: number;
+  tracked_price?: number | null;// Added field
   _in_stock?: boolean;
   _updated_at?: string;
   specs?:
@@ -165,6 +166,7 @@ function readCell(row: ComponentRow, key: string): unknown {
   if (key === "completeness") return row.quality?.completeness ?? 0;
   if (key === "price") return row.price;
   if (key === "discounted_price") return row.discounted_price;
+  if (key === "tracked_price") return row.tracked_price; // Reading tracked_price
   if (key === "in_stock") return row._in_stock;
   if (key === "updated_at") return row._updated_at;
   if (key.startsWith("spec:")) {
@@ -183,7 +185,6 @@ function readCell(row: ComponentRow, key: string): unknown {
 }
 
 function Cell({ value, columnKey, row, onQuickEdit }: CellProps) {
-  // Inline edit: allow editing manufacturer/model_name/model_number/vendor/status and numeric spec fields.
   const editableBase = [
     "manufacturer",
     "vendor",
@@ -194,12 +195,16 @@ function Cell({ value, columnKey, row, onQuickEdit }: CellProps) {
   const editable =
     editableBase.includes(columnKey) || columnKey.startsWith("spec:");
 
-  if (columnKey === "price" || columnKey === "discounted_price")
+  // Pricing Logic for Price, Discounted, and Tracked side-by-side
+  if (columnKey === "price" || columnKey === "discounted_price" || columnKey === "tracked_price")
     return value ? (
-      <span className="font-medium">{fmtINR(Number(value))}</span>
+      <span className={`font-medium ${columnKey === "tracked_price" ? "text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+        {fmtINR(Number(value))}
+      </span>
     ) : (
       <span className="text-muted-foreground">—</span>
     );
+
   if (columnKey === "in_stock")
     return value ? (
       <Badge className="rounded-2xl">In stock</Badge>
@@ -208,59 +213,39 @@ function Cell({ value, columnKey, row, onQuickEdit }: CellProps) {
         OOS
       </Badge>
     );
+
   if (columnKey === "updated_at" || columnKey === "updatedAt") {
     if (!value) return <span className="text-muted-foreground">—</span>;
-
     try {
       const date = new Date(String(value));
-      // Format in Indian timezone with full date and time
       const formatted = date.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
       });
       return <span className="text-muted-foreground">{formatted}</span>;
     } catch (error) {
-      console.error("Error formatting timestamp:", error);
       return <span className="text-muted-foreground">{String(value)}</span>;
     }
   }
+
   if (columnKey === "completeness") {
     const v = Number(value) || 0;
     const variant = v >= 85 ? "outline" : v >= 70 ? "secondary" : "destructive";
-    return (
-      <Badge variant={variant} className="rounded-2xl">
-        {v}%
-      </Badge>
-    );
+    return <Badge variant={variant} className="rounded-2xl">{v}%</Badge>;
   }
 
   if (!editable)
-    return (
-      <span>
-        {String(value ?? "") || (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </span>
-    );
+    return <span>{String(value ?? "") || <span className="text-muted-foreground">—</span>}</span>;
 
-  // Stop propagation to avoid row open on click.
   return (
     <InlineEdit
       value={value}
       onCommit={(next: unknown) => {
-        const field = columnKey;
-        const before = String(value ?? "");
-        const after = String(next ?? "");
-        onQuickEdit(row.component_id || "", {
-          _field: field,
-          _before: before,
-          _after: after,
-          field,
+        onQuickEdit(row.component_id || row.id || "", {
+          _field: columnKey,
+          _before: String(value ?? ""),
+          _after: String(next ?? ""),
+          field: columnKey,
           value: next,
         });
       }}
@@ -272,103 +257,42 @@ function InlineEdit({ value, onCommit }: InlineEditProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value ?? ""));
 
-  function start() {
-    setDraft(String(value ?? ""));
-    setEditing(true);
-  }
-  function cancel() {
-    setEditing(false);
-    setDraft(String(value ?? ""));
-  }
-  function save() {
-    setEditing(false);
-    onCommit(draft);
-  }
-
   if (!editing) {
     return (
       <button
         type="button"
         className="group inline-flex items-center gap-2 hover:underline underline-offset-4"
-        onClick={(e) => {
-          e.stopPropagation();
-          start();
-        }}
+        onClick={(e) => { e.stopPropagation(); setDraft(String(value ?? "")); setEditing(true); }}
       >
-        <span>
-          {String(value ?? "") || (
-            <span className="text-muted-foreground">—</span>
-          )}
-        </span>
+        <span>{String(value ?? "") || <span className="text-muted-foreground">—</span>}</span>
         <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-60" />
       </button>
     );
   }
 
   return (
-    <div
-      className="flex items-center gap-2"
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      <Input
-        className="h-8 rounded-2xl"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-      />
-      <Button size="sm" className="h-8 rounded-2xl" onClick={save}>
+    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <Input className="h-8 rounded-2xl" value={draft} onChange={(e) => setDraft(e.target.value)} />
+      <Button size="sm" className="h-8 rounded-2xl" onClick={() => { setEditing(false); onCommit(draft); }}>
         <Save className="h-4 w-4" />
       </Button>
-      <Button
-        size="sm"
-        variant="secondary"
-        className="h-8 rounded-2xl"
-        onClick={cancel}
-      >
+      <Button size="sm" variant="secondary" className="h-8 rounded-2xl" onClick={() => setEditing(false)}>
         <X className="h-4 w-4" />
       </Button>
     </div>
   );
 }
 
-export function applyPatch(
-  component: ComponentRow,
-  patch: EditPatch
-): ComponentRow {
+export function applyPatch(component: ComponentRow, patch: EditPatch): ComponentRow {
   const next = structuredClone(component);
   if (patch.field?.startsWith("spec:")) {
     const id = patch.field.split(":")[1];
     next.specs = next.specs || {};
-    next.specs[id] = next.specs[id] || {
-      v: "",
-      source_id: "manual",
-      confidence: 0.6,
-      updated_at: new Date().toISOString(),
-    };
-    const specObj = next.specs[id] as {
-      v: unknown;
-      source_id: string;
-      confidence: number;
-      updated_at: string;
-    };
-    specObj.v = coerceValue(patch.value);
-    specObj.source_id = "manual";
-    specObj.confidence = 0.8;
-    specObj.updated_at = new Date().toISOString();
+    next.specs[id] = { v: coerceValue(patch.value), source_id: "manual", confidence: 0.8, updated_at: new Date().toISOString() };
     return next;
   }
-  if (
-    [
-      "manufacturer",
-      "vendor",
-      "model_name",
-      "model_number",
-      "active_status",
-    ].includes(patch.field)
-  ) {
+  if (["manufacturer", "vendor", "model_name", "model_number", "active_status"].includes(patch.field)) {
     next[patch.field] = patch.value;
-    return next;
   }
   return next;
 }

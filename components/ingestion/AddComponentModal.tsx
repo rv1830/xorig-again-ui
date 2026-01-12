@@ -21,7 +21,6 @@ interface CoreIdentityData {
   product_page_url: string;
   price: string;
   discounted_price: string;
-  tracked_price: string;
 }
 
 interface AddComponentModalProps {
@@ -47,7 +46,6 @@ export default function AddComponentModal({
     product_page_url: "",
     price: "",
     discounted_price: "",
-    tracked_price: "",
   });
 
   const [extraSpecs, setExtraSpecs] = useState<Array<{ review: string; source: string }>>([]);
@@ -62,7 +60,7 @@ export default function AddComponentModal({
   useEffect(() => {
     if (isOpen) {
       setComponentType("");
-      setCoreData({ manufacturer: "", vendor: "", model_name: "", model_number: "", product_page_url: "", price: "", discounted_price: "", tracked_price: "" });
+      setCoreData({ manufacturer: "", vendor: "", model_name: "", model_number: "", product_page_url: "", price: "", discounted_price: "" });
       setExtraSpecs([]);
       setCoreCustomFields([]);
       setTechSpecCustomFields([]);
@@ -89,7 +87,6 @@ export default function AddComponentModal({
   const addCustomField = () => {
     if (!newFieldName.trim()) return alert("Please enter a field name");
     
-    // Default values based on type
     let defaultValue: any = "";
     if (newFieldType === "int") defaultValue = 0;
     if (newFieldType === "boolean") defaultValue = false;
@@ -110,7 +107,6 @@ export default function AddComponentModal({
     const updated = [...fields];
     const field = updated[index];
 
-    // Basic Type Validation/Casting
     if (field.type === "int") {
       updated[index].value = parseInt(value) || 0;
     } else if (field.type === "boolean") {
@@ -138,7 +134,6 @@ export default function AddComponentModal({
         ...coreData,
         price: coreData.price ? parseFloat(coreData.price) : null,
         discounted_price: coreData.discounted_price ? parseFloat(coreData.discounted_price) : null,
-        tracked_price: coreData.tracked_price ? parseFloat(coreData.tracked_price) : null,
         core_custom_data: mapFields(coreCustomFields),
         tech_specs: mapFields(techSpecCustomFields),
         specs: {
@@ -156,7 +151,6 @@ export default function AddComponentModal({
     }
   };
 
-  // Helper to render custom field input based on type
   const renderFieldInput = (field: CustomField, index: number, section: "core" | "techspec") => {
     const fields = section === "core" ? coreCustomFields : techSpecCustomFields;
     const setFields = section === "core" ? setCoreCustomFields : setTechSpecCustomFields;
@@ -222,10 +216,9 @@ export default function AddComponentModal({
                 </Button>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input label="Price (₹)" type="number" value={coreData.price} onChange={(e: any) => setCoreData({ ...coreData, price: e.target.value })} />
               <Input label="Discounted Price (₹)" type="number" value={coreData.discounted_price} onChange={(e: any) => setCoreData({ ...coreData, discounted_price: e.target.value })} />
-              <Input label="Tracked Price (₹)" type="number" value={coreData.tracked_price} onChange={(e: any) => setCoreData({ ...coreData, tracked_price: e.target.value })} />
             </div>
             
             {coreCustomFields.length > 0 && (
@@ -308,7 +301,7 @@ export default function AddComponentModal({
             </div>
           </Card>
 
-          {/* Footer Actions - Moved to bottom of the form */}
+          {/* Footer Actions */}
           <div className="flex justify-end gap-4 pt-10 border-t border-gray-200">
             <Button type="button" variant="secondary" onClick={onClose} className="px-8 py-6 text-lg cursor-pointer">Cancel</Button>
             <Button type="submit" disabled={loading} className="px-10 py-6 text-lg bg-blue-600 hover:bg-blue-700 cursor-pointer">

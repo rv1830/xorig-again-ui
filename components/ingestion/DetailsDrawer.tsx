@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Save, Plus, Trash2, Loader2, X } from "lucide-react"; // X import kiya
+import { Pencil, Save, Plus, Trash2, Loader2, X } from "lucide-react";
 
 interface ComponentData {
   id?: string;
@@ -78,6 +78,7 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
       product_page_url: component.product_page_url || "",
       price: component.price || "",
       discounted_price: component.discounted_price || "",
+      tracked_price: component.tracked_price || "", // Response se tracked_price map kiya
     });
 
     const relationKey = component.type.toLowerCase();
@@ -182,7 +183,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
               <DialogDescription className="text-blue-600 font-semibold uppercase tracking-wider">{coreData.type}</DialogDescription>
             </div>
             <div className="flex gap-3 items-center">
-              {/* CROSS BUTTON ADDED HERE */}
               <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
                 <X className="w-5 h-5" />
               </Button>
@@ -233,6 +233,13 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">MRP (₹)</label><Input type="number" disabled={!editMode} value={coreData.price} onChange={e => setCoreData({...coreData, price: e.target.value})} /></div>
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Sale Price (₹)</label><Input type="number" disabled={!editMode} value={coreData.discounted_price} onChange={e => setCoreData({...coreData, discounted_price: e.target.value})} /></div>
+                
+                {/* Tracked Price - Always disabled for user manual entry */}
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Tracked Price (₹) - API Only</label>
+                  <Input type="number" disabled={true} className="bg-slate-100 dark:bg-slate-900 italic text-blue-600 font-semibold" value={coreData.tracked_price} />
+                </div>
+
                 <div className="col-span-2 space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Product Page</label><Input disabled={!editMode} value={coreData.product_page_url} onChange={e => setCoreData({...coreData, product_page_url: e.target.value})} /></div>
               </div>
             </section>

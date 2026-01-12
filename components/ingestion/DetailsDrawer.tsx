@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Save, Plus, Trash2, Loader2, X } from "lucide-react";
+import { Pencil, Save, Plus, Trash2, Loader2, X, AlertCircle } from "lucide-react";
 
 interface ComponentData {
   id?: string;
@@ -40,7 +40,7 @@ interface DetailsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   component: ComponentData | null;
-  onSave: (data: any) => void;
+  onSave: (data: any) => Promise<any>; // Changed to Promise to handle response
   isCreating: boolean;
 }
 
@@ -54,6 +54,7 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [parseError, setParseError] = useState(false); // Warning state
 
   const [coreData, setCoreData] = useState<Partial<ComponentData>>({});
   const [coreCustomFields, setCoreCustomFields] = useState<TypedField[]>([]);
@@ -78,8 +79,11 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
       product_page_url: component.product_page_url || "",
       price: component.price || "",
       discounted_price: component.discounted_price || "",
-      tracked_price: component.tracked_price || "", // Response se tracked_price map kiya
+      tracked_price: component.tracked_price || "0",
     });
+
+    // Reset error on new component load
+    setParseError(Number(component.tracked_price) === 0 && !!component.product_page_url);
 
     const relationKey = component.type.toLowerCase();
     const specificData = component[relationKey] || {};
@@ -102,6 +106,7 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
 
   const handleSave = async () => {
     setLoading(true);
+    setParseError(false); // Reset error before save
     try {
       const formatValue = (f: TypedField) => {
         if (f.type === "number") return Number(f.value) || 0;
@@ -122,8 +127,20 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
         specs: { extra_specs: extraSpecs.filter(s => s.review || s.source) }
       };
 
-      await onSave(payload);
-      setEditMode(false);
+      const response = await onSave(payload);
+      
+      // Check for warning from backend
+      if (response && response.warning === "Not able to parsed") {
+        setParseError(true);
+        setCoreData(prev => ({ ...prev, tracked_price: 0 }));
+        toast({
+          variant: "destructive",
+          title: "Scraper Warning",
+          description: "Could not parse price from the provided URL. Set to 0.",
+        });
+      } else {
+        setEditMode(false);
+      }
     } catch (err) {
       toast({ variant: "destructive", title: "Save Failed" });
     } finally {
@@ -234,10 +251,25 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">MRP (₹)</label><Input type="number" disabled={!editMode} value={coreData.price} onChange={e => setCoreData({...coreData, price: e.target.value})} /></div>
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Sale Price (₹)</label><Input type="number" disabled={!editMode} value={coreData.discounted_price} onChange={e => setCoreData({...coreData, discounted_price: e.target.value})} /></div>
                 
-                {/* Tracked Price - Always disabled for user manual entry */}
+                {/* Tracked Price - Shows Warning if Parse Fails */}
                 <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Tracked Price (₹) - API Only</label>
-                  <Input type="number" disabled={true} className="bg-slate-100 dark:bg-slate-900 italic text-blue-600 font-semibold" value={coreData.tracked_price} />
+                  <label className={`text-xs font-bold uppercase ${parseError ? 'text-red-500' : 'text-slate-500'}`}>
+                    Tracked Price (₹) - API Only
+                  </label>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      disabled={true} 
+                      className={`font-mono font-semibold ${parseError ? 'bg-red-50 border-red-300 text-red-600 italic' : 'bg-slate-100 dark:bg-slate-900 text-blue-600'}`} 
+                      value={coreData.tracked_price} 
+                    />
+                    {parseError && (
+                      <div className="flex items-center gap-1 mt-1 text-red-500 text-[11px] font-medium animate-pulse">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Warning: Not able to parsed. Check URL.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="col-span-2 space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Product Page</label><Input disabled={!editMode} value={coreData.product_page_url} onChange={e => setCoreData({...coreData, product_page_url: e.target.value})} /></div>

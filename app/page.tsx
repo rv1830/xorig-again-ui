@@ -299,7 +299,7 @@ export default function XORigIngestionAdmin() {
             <div className="flex gap-3">
               {tab === "components" && (
                 <Button
-                  className="rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all font-medium"
+                  className="rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all font-medium cursor-pointer text-white"
                   onClick={handleNewComponent}
                 >
                   <Plus className="mr-2 h-4 w-4" /> New Component

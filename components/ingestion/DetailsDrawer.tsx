@@ -40,7 +40,7 @@ interface DetailsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   component: ComponentData | null;
-  onSave: (data: any) => Promise<any>; // Changed to Promise to handle response
+  onSave: (data: any) => Promise<any>;
   isCreating: boolean;
 }
 
@@ -50,11 +50,23 @@ interface TypedField {
   type: "string" | "number" | "boolean" | "array";
 }
 
+// Vendor Options
+const VENDOR_OPTIONS = [
+  { id: "AMAZON", name: "Amazon" },
+  { id: "FLIPKART", name: "Flipkart" },
+  { id: "MDCOMPUTERS", name: "MDComputers" },
+  { id: "VEDANT", name: "Vedant Computers" },
+  { id: "PRIMEABGB", name: "PrimeABGB" },
+  { id: "ELITEHUBS", name: "EliteHubs" },
+  { id: "OTHER", name: "Other (Manual Entry)" },
+];
+
 export default function DetailsDrawer({ open, onOpenChange, component, onSave, isCreating }: DetailsDrawerProps) {
   const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [parseError, setParseError] = useState(false); // Warning state
+  const [parseError, setParseError] = useState(false);
+  const [vendorType, setVendorType] = useState<string>("AMAZON");
 
   const [coreData, setCoreData] = useState<Partial<ComponentData>>({});
   const [coreCustomFields, setCoreCustomFields] = useState<TypedField[]>([]);
@@ -69,11 +81,18 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
   useEffect(() => {
     if (!component) return;
 
+    // Detect if current vendor is a standard one or manual
+    const standardVendors = ["AMAZON", "FLIPKART", "MDCOMPUTERS", "VEDANT", "PRIMEABGB", "ELITEHUBS"];
+    const currentVendor = component.vendor || "AMAZON";
+    const isStandard = standardVendors.includes(currentVendor.toUpperCase());
+    
+    setVendorType(isStandard ? currentVendor.toUpperCase() : "OTHER");
+
     setCoreData({
       id: component.id,
       type: component.type,
       manufacturer: component.manufacturer || "",
-      vendor: component.vendor || "",
+      vendor: component.vendor || "AMAZON",
       model_name: component.model_name || "",
       model_number: component.model_number || "",
       product_page_url: component.product_page_url || "",
@@ -82,7 +101,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
       tracked_price: component.tracked_price || "0",
     });
 
-    // Reset error on new component load
     setParseError(Number(component.tracked_price) === 0 && !!component.product_page_url);
 
     const relationKey = component.type.toLowerCase();
@@ -106,7 +124,7 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
 
   const handleSave = async () => {
     setLoading(true);
-    setParseError(false); // Reset error before save
+    setParseError(false);
     try {
       const formatValue = (f: TypedField) => {
         if (f.type === "number") return Number(f.value) || 0;
@@ -129,7 +147,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
 
       const response = await onSave(payload);
       
-      // Check for warning from backend
       if (response && response.warning === "Not able to parsed") {
         setParseError(true);
         setCoreData(prev => ({ ...prev, tracked_price: 0 }));
@@ -229,7 +246,37 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Manufacturer</label><Input disabled={!editMode} value={coreData.manufacturer} onChange={e => setCoreData({...coreData, manufacturer: e.target.value})} /></div>
-                <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Vendor</label><Input disabled={!editMode} value={coreData.vendor} onChange={e => setCoreData({...coreData, vendor: e.target.value})} /></div>
+                
+                {/* VENDOR DROPDOWN LOGIC */}
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Vendor</label>
+                    {editMode ? (
+                        <div className="flex gap-2">
+                             <Select value={vendorType} onValueChange={(val) => {
+                                 setVendorType(val);
+                                 if (val !== "OTHER") setCoreData({...coreData, vendor: val});
+                                 else setCoreData({...coreData, vendor: ""});
+                             }}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Select Vendor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {VENDOR_OPTIONS.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                                </SelectContent>
+                             </Select>
+                             <Input 
+                                placeholder="Name..." 
+                                value={coreData.vendor} 
+                                disabled={vendorType !== "OTHER"} 
+                                onChange={e => setCoreData({...coreData, vendor: e.target.value})}
+                                className="flex-1"
+                             />
+                        </div>
+                    ) : (
+                        <Input disabled={true} value={coreData.vendor} />
+                    )}
+                </div>
+
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Model Name</label><Input disabled={!editMode} value={coreData.model_name} onChange={e => setCoreData({...coreData, model_name: e.target.value})} /></div>
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Model Number</label><Input disabled={!editMode} value={coreData.model_number} onChange={e => setCoreData({...coreData, model_number: e.target.value})} /></div>
                 
@@ -251,7 +298,6 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">MRP (₹)</label><Input type="number" disabled={!editMode} value={coreData.price} onChange={e => setCoreData({...coreData, price: e.target.value})} /></div>
                 <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Sale Price (₹)</label><Input type="number" disabled={!editMode} value={coreData.discounted_price} onChange={e => setCoreData({...coreData, discounted_price: e.target.value})} /></div>
                 
-                {/* Tracked Price - Shows Warning if Parse Fails */}
                 <div className="space-y-1.5 col-span-2">
                   <label className={`text-xs font-bold uppercase ${parseError ? 'text-red-500' : 'text-slate-500'}`}>
                     Tracked Price (₹) - API Only
@@ -272,7 +318,11 @@ export default function DetailsDrawer({ open, onOpenChange, component, onSave, i
                   </div>
                 </div>
 
-                <div className="col-span-2 space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Product Page</label><Input disabled={!editMode} value={coreData.product_page_url} onChange={e => setCoreData({...coreData, product_page_url: e.target.value})} /></div>
+                <div className="col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Product Page</label>
+                    <Input disabled={!editMode} value={coreData.product_page_url} onChange={e => setCoreData({...coreData, product_page_url: e.target.value})} />
+                    <p className="text-[10px] text-slate-400 mt-1 italic">Parsing supported for: MDComputers, PrimeABGB, EliteHubs, Vedant.</p>
+                </div>
               </div>
             </section>
           </div>

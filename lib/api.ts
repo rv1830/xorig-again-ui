@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // ✅ Make sure Backend is running on Port 5000
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://xoring-backagain.onrender.com/api";
 
 export const api = {
   // 1. Get Master Data (Categories, Rules)
